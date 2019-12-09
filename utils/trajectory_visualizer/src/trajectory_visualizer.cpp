@@ -56,7 +56,6 @@ void TrajectoryVisualizer::autopilotFeedbackCallback(
 
   odometry_ref_pub_.publish(reference_odometry);
 
-  ///////////////
   visualization_msgs::MarkerArray marker_msg_ref;
   visualization_msgs::MarkerArray marker_msg_se;
 
