@@ -17,6 +17,8 @@ enum class ArmState
   DISARMED, ARMED
 };
 
+#pragma pack(push)
+#pragma pack(1)
 struct SBusMsg
 {
   // Constants
@@ -63,5 +65,5 @@ struct SBusMsg
   bool isArmed() const;
   ControlMode getControlMode() const;
 };
-
+#pragma pack(pop)
 } // namespace sbus_bridge
