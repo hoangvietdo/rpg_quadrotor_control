@@ -147,6 +147,7 @@ void AutoPilot<Tcontroller, Tparams>::watchdogThread() {
         && autopilot_state_ != States::EMERGENCY_LAND
         && autopilot_state_ != States::COMMAND_FEEDTHROUGH
         && autopilot_state_ != States::RC_MANUAL) {
+      ROS_INFO("[%s] No state estimate available, switching to emergency land.", pnh_.getNamespace().c_str());
       setAutoPilotStateForced(States::EMERGENCY_LAND);
     }
 
@@ -300,6 +301,23 @@ void AutoPilot<Tcontroller, Tparams>::stateEstimateCallback(
 
   received_state_est_ = quadrotor_common::QuadStateEstimate(*msg);
   if (!received_state_est_.isValid()) {
+    ROS_INFO("[%s] Received invalid state estimate", pnh_.getNamespace().c_str());
+    ROS_INFO(
+        "[%s] x: %.2f,  y: %.2f,  z: %.2f,  qw: %.2f,  qx: %.2f,  qy: %.2f,  qz: %.2f,  vx: %.2f,  vy: %.2f,  vz: %.2f,  brx: %.2f,  bry: %.2f,  brz: %.2f",
+        pnh_.getNamespace().c_str(),
+        received_state_est_.position.x(),
+        received_state_est_.position.y(),
+        received_state_est_.position.z(),
+        received_state_est_.orientation.w(),
+        received_state_est_.orientation.x(),
+        received_state_est_.orientation.y(),
+        received_state_est_.orientation.z(),
+        received_state_est_.velocity.x(),
+        received_state_est_.velocity.y(),
+        received_state_est_.velocity.z(),
+        received_state_est_.bodyrates.x(),
+        received_state_est_.bodyrates.y(),
+        received_state_est_.bodyrates.z());
     state_estimate_available_ = false;
     if (autopilot_state_ != States::OFF) {
       // Do not run control loop if state estimate is not valid
@@ -321,8 +339,7 @@ void AutoPilot<Tcontroller, Tparams>::stateEstimateCallback(
   quadrotor_common::ControlCommand control_cmd;
 
   ros::Time wall_time_now = ros::Time::now();
-  ros::Time command_execution_time = wall_time_now
-                                     + ros::Duration(control_command_delay_);
+  ros::Time command_execution_time = wall_time_now + ros::Duration(control_command_delay_);
 
   quadrotor_common::QuadStateEstimate predicted_state = received_state_est_;
   if (autopilot_state_ != States::OFF) {
@@ -1124,8 +1141,8 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
       if (point.time_from_start.toSec() > (dt.toSec() - time_wrapover)) {
         // check if two trajectory points are the same...
         if (reference_trajectory_.points.size() > 1) {
-            point.time_from_start += ros::Duration(time_wrapover);
-            reference_trajectory_.points.push_back(point);
+          point.time_from_start += ros::Duration(time_wrapover);
+          reference_trajectory_.points.push_back(point);
         } else {
           // this is the first point of the reference trajectory
           reference_trajectory_.points.push_back(point);
@@ -1210,6 +1227,7 @@ void AutoPilot<Tcontroller, Tparams>::setAutoPilotState(const States& new_state)
       && new_state != States::EMERGENCY_LAND
       && new_state != States::COMMAND_FEEDTHROUGH
       && new_state != States::RC_MANUAL) {
+    ROS_INFO("[%s] No state estimate available, switching to emergency land.", pnh_.getNamespace().c_str());
     setAutoPilotStateForced(States::EMERGENCY_LAND);
     return;
   }
@@ -1319,7 +1337,7 @@ void AutoPilot<Tcontroller, Tparams>::publishControlCommand(
     control_cmd_msg = control_cmd.toRosMessage();
 
     // in optitrack flight, the laird module can only handle control commands at 50-60Hz. Limit publishing frequency here
-    if((ros::Time::now() - time_last_control_command_published_).toSec() > min_control_period_) {
+    if ((ros::Time::now() - time_last_control_command_published_).toSec() > min_control_period_) {
       control_command_pub_.publish(control_cmd_msg);
       time_last_control_command_published_ = ros::Time::now();
     }

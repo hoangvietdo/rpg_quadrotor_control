@@ -13,12 +13,16 @@ TrajectoryVisualizer::TrajectoryVisualizer() {
     ros::shutdown();
   }
 
+  marker_pub_gt_ = nh_.advertise<visualization_msgs::MarkerArray>(
+      "gt_state", 1);
   marker_pub_ref_ = nh_.advertise<visualization_msgs::MarkerArray>(
       "autopilot_feedback_trajectory_ref", 1);
   marker_pub_se_ = nh_.advertise<visualization_msgs::MarkerArray>(
       "autopilot_feedback_trajectory_se", 1);
   odometry_ref_pub_ = nh_.advertise<nav_msgs::Odometry>(
       "reference_odometry", 1);
+  odometry_gt_sub_ = nh_.subscribe(
+      "ground_truth/odometry", 1, &TrajectoryVisualizer::odometryGTCallback, this);
   bodyrates_pub_ = nh_.advertise<visualization_msgs::Marker>("bodyrates_viz", 1);
   autopilot_feedback_sub_ = nh_.subscribe(
       "autopilot/feedback", 1, &TrajectoryVisualizer::autopilotFeedbackCallback,
@@ -158,6 +162,57 @@ void TrajectoryVisualizer::autopilotFeedbackCallback(
   marker_msg_se.markers.push_back(marker);
 
   marker_pub_se_.publish(marker_msg_se);
+}
+
+void TrajectoryVisualizer::odometryGTCallback(const nav_msgs::OdometryConstPtr& msg) {
+  // store message in buffer
+  odometry_queue_.push_front(*msg);
+  while (odometry_queue_.size() > 20*n_points_to_visualize_) {
+    odometry_queue_.pop_back();
+  }
+
+  if (odometry_queue_.size() < 2) {
+    return;
+  }
+
+  ///////////////
+  visualization_msgs::MarkerArray marker_msg_gt;
+
+  // General marker
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "world";
+  marker.header.stamp = ros::Time::now();
+  marker.ns = "";
+  marker.action = visualization_msgs::Marker::MODIFY;
+  marker.lifetime = ros::Duration(0);
+  marker.type = visualization_msgs::Marker::LINE_STRIP;
+  marker.pose.position.x = 0.0;
+  marker.pose.position.y = 0.0;
+  marker.pose.position.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+
+  // Reference trajectory
+  marker.id = 0;
+  marker.scale.x = 0.025;
+  marker.color.r = 1.0;
+  marker.color.g = 0.0;
+  marker.color.b = 0.0;
+  marker.color.a = 1.0;
+
+  for (auto it = odometry_queue_.begin(); it != odometry_queue_.end(); it++) {
+    geometry_msgs::Point point;
+    point.x = it->pose.pose.position.x;
+    point.y = it->pose.pose.position.y;
+    point.z = it->pose.pose.position.z;
+
+    marker.points.push_back(point);
+  }
+
+  marker_msg_gt.markers.push_back(marker);
+  marker_pub_gt_.publish(marker_msg_gt);
 }
 
 bool TrajectoryVisualizer::loadParameters() {
