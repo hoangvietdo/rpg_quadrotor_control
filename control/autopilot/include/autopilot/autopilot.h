@@ -124,7 +124,6 @@ private:
 
   ros::Publisher control_command_pub_;
   ros::Publisher autopilot_feedback_pub_;
-  ros::Publisher marker_pub_ref_;
 
   ros::Subscriber state_estimate_sub_;
   ros::Subscriber low_level_feedback_sub_;

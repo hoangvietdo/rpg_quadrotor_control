@@ -44,8 +44,6 @@ AutoPilot<Tcontroller, Tparams>::AutoPilot(const ros::NodeHandle& nh, const ros:
       "control_command", 1);
   autopilot_feedback_pub_ = nh_.advertise<quadrotor_msgs::AutopilotFeedback>(
       "autopilot/feedback", 1);
-  marker_pub_ref_ = nh_.advertise<visualization_msgs::MarkerArray>(
-      "reference_trajectory", 1);
 
   // Subscribers
   state_estimate_sub_ = nh_.subscribe("autopilot/state_estimate", 1,
@@ -1177,42 +1175,6 @@ AutoPilot<Tcontroller, Tparams>::executeTrajectory(
     return base_controller_.run(state_estimate, reference_trajectory_,
                                 base_controller_params_);
   }
-
-  // visualize reference trajectory
-  // Reference trajectory
-  visualization_msgs::MarkerArray marker_msg_ref;
-  visualization_msgs::Marker marker;
-  marker.header.frame_id = "world";
-  marker.header.stamp = ros::Time::now();
-  marker.ns = "";
-  marker.action = visualization_msgs::Marker::MODIFY;
-  marker.lifetime = ros::Duration(0);
-  marker.type = visualization_msgs::Marker::LINE_STRIP;
-  marker.pose.position.x = 0.0;
-  marker.pose.position.y = 0.0;
-  marker.pose.position.z = 0.0;
-  marker.pose.orientation.w = 1.0;
-  marker.pose.orientation.x = 0.0;
-  marker.pose.orientation.y = 0.0;
-  marker.pose.orientation.z = 0.0;
-  marker.id = 0;
-  marker.scale.x = 0.015;
-  marker.color.r = 0.0;
-  marker.color.g = 0.0;
-  marker.color.b = 1.0;
-  marker.color.a = 1.0;
-
-  for (auto it = reference_trajectory_.points.begin(); it != reference_trajectory_.points.end(); it++) {
-    geometry_msgs::Point point;
-    point.x = it->position.x();
-    point.y = it->position.y();
-    point.z = it->position.z();
-
-    marker.points.push_back(point);
-  }
-
-  marker_msg_ref.markers.push_back(marker);
-  marker_pub_ref_.publish(marker_msg_ref);
 
   const quadrotor_common::ControlCommand command = base_controller_.run(
       state_estimate, reference_trajectory_, base_controller_params_);
